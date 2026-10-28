@@ -4,6 +4,14 @@
   "description": "Generate commit messages using Claude Code CLI, Codex CLI, or the OpenAI-compatible / Anthropic APIs",
   "version": "0.0.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ashishgupta06/flashcommit.git"
+  },
+  "homepage": "https://github.com/ashishgupta06/flashcommit#readme",
+  "bugs": {
+    "url": "https://github.com/ashishgupta06/flashcommit/issues"
+  },
   "engines": {
     "vscode": "^1.140.0"
   },
