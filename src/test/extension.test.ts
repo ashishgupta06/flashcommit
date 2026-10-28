@@ -1,15 +1,13 @@
 import * as assert from 'assert';
+import { cleanMessage } from '../extension';
 
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
-import * as vscode from 'vscode';
-// import * as myExtension from '../../extension';
-
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
-
-	test('Sample test', () => {
-		assert.strictEqual(-1, [1, 2, 3].indexOf(5));
-		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
+suite('cleanMessage', () => {
+	test('strips a wrapping code fence', () => {
+		assert.strictEqual(cleanMessage('```\nfeat: add codex\n\nbody\n```\n'), 'feat: add codex\n\nbody');
+		assert.strictEqual(cleanMessage('```text\nfix: x\n```'), 'fix: x');
+	});
+	test('leaves plain messages and inner fences alone', () => {
+		assert.strictEqual(cleanMessage('  fix: x \n'), 'fix: x');
+		assert.strictEqual(cleanMessage('docs: usage\n\n```\nnpm i\n```'), 'docs: usage\n\n```\nnpm i\n```');
 	});
 });

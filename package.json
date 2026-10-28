@@ -158,6 +158,7 @@
         "flashcommit.timeoutSeconds": {
           "type": "number",
           "default": 60,
+          "minimum": 1,
           "description": "Generation timeout in seconds.",
           "order": 15
         }
