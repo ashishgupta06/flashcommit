@@ -45,22 +45,26 @@
             "openai"
           ],
           "default": "claude",
-          "description": "Backend used to generate commit messages."
+          "description": "Backend used to generate commit messages.",
+          "order": 0
         },
         "flashcommit.prompt": {
           "type": "string",
           "default": "Write a concise conventional commit message for this diff. Output only the message.",
-          "description": "Instruction sent along with the diff."
+          "description": "Instruction sent along with the diff.",
+          "order": 1
         },
         "flashcommit.claude.path": {
           "type": "string",
           "default": "claude",
-          "description": "Path to the Claude Code CLI."
+          "description": "[Claude CLI] Path to the Claude Code CLI.",
+          "order": 2
         },
         "flashcommit.claude.model": {
           "type": "string",
           "default": "haiku",
-          "description": "Model passed as --model (empty = CLI default)."
+          "description": "[Claude CLI] Model passed as --model (empty = CLI default).",
+          "order": 3
         },
         "flashcommit.claude.allowedTools": {
           "type": "array",
@@ -68,7 +72,8 @@
             "type": "string"
           },
           "default": [],
-          "description": "Tools Claude Code may use without prompting, passed as --allowedTools (e.g. \"Read\", \"Bash(git log:*)\"). Empty = not passed."
+          "description": "[Claude CLI] Tools Claude Code may use without prompting, passed as --allowedTools (e.g. \"Read\", \"Bash(git log:*)\"). Empty = not passed.",
+          "order": 4
         },
         "flashcommit.claude.extraArgs": {
           "type": "array",
@@ -76,22 +81,26 @@
             "type": "string"
           },
           "default": [],
-          "description": "Extra arguments passed to claude -p."
+          "description": "[Claude CLI] Extra arguments passed to claude -p.",
+          "order": 5
         },
         "flashcommit.openai.baseUrl": {
           "type": "string",
           "default": "https://api.openai.com/v1",
-          "description": "OpenAI-compatible base URL (e.g. http://localhost:11434/v1 for Ollama)."
+          "description": "[OpenAI-compatible] OpenAI-compatible base URL (e.g. http://localhost:11434/v1 for Ollama).",
+          "order": 6
         },
         "flashcommit.openai.model": {
           "type": "string",
           "default": "gpt-4o-mini",
-          "description": "Model name for the OpenAI-compatible endpoint."
+          "description": "[OpenAI-compatible] Model name for the OpenAI-compatible endpoint.",
+          "order": 7
         },
         "flashcommit.timeoutSeconds": {
           "type": "number",
           "default": 60,
-          "description": "Generation timeout in seconds."
+          "description": "Generation timeout in seconds.",
+          "order": 8
         }
       }
     }
