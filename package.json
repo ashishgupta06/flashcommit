@@ -1,7 +1,7 @@
 {
   "name": "flashcommit",
   "displayName": "Flash Commit",
-  "description": "Generate commit messages using claude code cli or openai compatible api",
+  "description": "Generate commit messages using Claude Code CLI, Codex CLI, or the OpenAI-compatible / Anthropic APIs",
   "version": "0.0.1",
   "license": "MIT",
   "engines": {
@@ -22,7 +22,7 @@
       },
       {
         "command": "flashcommit.setApiKey",
-        "title": "Set OpenAI API Key",
+        "title": "Set API Key",
         "category": "Flash Commit"
       }
     ],
@@ -42,11 +42,19 @@
           "type": "string",
           "enum": [
             "claude",
-            "openai"
+            "codex",
+            "openai",
+            "anthropic"
           ],
           "default": "claude",
           "description": "Backend used to generate commit messages.",
-          "order": 0
+          "order": 0,
+          "enumDescriptions": [
+            "Claude Code CLI",
+            "OpenAI Codex CLI",
+            "OpenAI-compatible chat completions API",
+            "Anthropic Messages API"
+          ]
         },
         "flashcommit.prompt": {
           "type": "string",
@@ -84,23 +92,74 @@
           "description": "[Claude CLI] Extra arguments passed to claude -p.",
           "order": 5
         },
+        "flashcommit.codex.path": {
+          "type": "string",
+          "default": "codex",
+          "description": "[Codex CLI] Path to the Codex CLI.",
+          "order": 6
+        },
+        "flashcommit.codex.model": {
+          "type": "string",
+          "default": "",
+          "description": "[Codex CLI] Model passed as -m (empty = CLI default).",
+          "order": 7
+        },
+        "flashcommit.codex.extraArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "[Codex CLI] Extra arguments passed to codex exec.",
+          "order": 8
+        },
         "flashcommit.openai.baseUrl": {
           "type": "string",
           "default": "https://api.openai.com/v1",
-          "description": "[OpenAI-compatible] OpenAI-compatible base URL (e.g. http://localhost:11434/v1 for Ollama).",
-          "order": 6
+          "order": 9,
+          "markdownDescription": "[OpenAI-compatible] OpenAI-compatible base URL (e.g. http://localhost:11434/v1 for Ollama). API key: [Set API Key](command:flashcommit.setApiKey?%5B%22openai%22%5D)."
         },
         "flashcommit.openai.model": {
           "type": "string",
           "default": "gpt-4o-mini",
           "description": "[OpenAI-compatible] Model name for the OpenAI-compatible endpoint.",
-          "order": 7
+          "order": 10
+        },
+        "flashcommit.openai.headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "[OpenAI-compatible] Extra HTTP headers sent with each request (override the defaults).",
+          "order": 11
+        },
+        "flashcommit.anthropic.baseUrl": {
+          "type": "string",
+          "default": "https://api.anthropic.com",
+          "order": 12,
+          "markdownDescription": "[Anthropic] Base URL for the Messages API. API key: [Set API Key](command:flashcommit.setApiKey?%5B%22anthropic%22%5D)."
+        },
+        "flashcommit.anthropic.model": {
+          "type": "string",
+          "default": "claude-haiku-5-5",
+          "description": "[Anthropic] Model name for the Messages API.",
+          "order": 13
+        },
+        "flashcommit.anthropic.headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "[Anthropic] Extra HTTP headers sent with each request (override the defaults).",
+          "order": 14
         },
         "flashcommit.timeoutSeconds": {
           "type": "number",
           "default": 60,
           "description": "Generation timeout in seconds.",
-          "order": 8
+          "order": 15
         }
       }
     }

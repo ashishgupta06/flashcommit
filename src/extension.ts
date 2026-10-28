@@ -5,7 +5,7 @@ import { execFile } from 'child_process';
 interface Repository { rootUri: vscode.Uri; inputBox: { value: string } }
 interface GitAPI { repositories: Repository[]; getRepository(uri: vscode.Uri): Repository | null }
 
-const KEY = 'flashcommit.openaiKey';
+const KEYS = { openai: 'flashcommit.openaiKey', anthropic: 'flashcommit.anthropicKey' };
 
 function run(cmd: string, args: string[], opts: { cwd?: string; input?: string; timeoutMs?: number } = {}): Promise<string> {
 	return new Promise((resolve, reject) => {
@@ -33,7 +33,7 @@ async function viaOpenAI(diff: string, cfg: vscode.WorkspaceConfiguration, promp
 	const url = cfg.get<string>('openai.baseUrl', '').replace(/\/+$/, '') + '/chat/completions';
 	const res = await fetch(url, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json', ...(key ? { Authorization: `Bearer ${key}` } : {}) },
+		headers: { 'Content-Type': 'application/json', ...(key ? { Authorization: `Bearer ${key}` } : {}), ...cfg.get<Record<string, string>>('openai.headers', {}) },
 		body: JSON.stringify({
 			model: cfg.get<string>('openai.model'),
 			messages: [{ role: 'system', content: prompt }, { role: 'user', content: diff }],
@@ -41,10 +41,46 @@ async function viaOpenAI(diff: string, cfg: vscode.WorkspaceConfiguration, promp
 		signal: AbortSignal.timeout(timeoutMs),
 	});
 	if (!res.ok) {
-		throw new Error(`${res.status} ${res.statusText}: ${(await res.text()).slice(0, 500)}`);
+		throw Object.assign(new Error(`${res.status} ${res.statusText}: ${(await res.text()).slice(0, 500)}`), { status: res.status });
 	}
 	const data = await res.json() as { choices?: { message?: { content?: string } }[] };
 	return data.choices?.[0]?.message?.content ?? '';
+}
+
+async function viaCodex(diff: string, cfg: vscode.WorkspaceConfiguration, prompt: string, timeoutMs: number, cwd: string) {
+	const model = cfg.get<string>('codex.model');
+	// "-" reads the prompt from stdin; exec prints only the final message to stdout (progress goes to stderr).
+	const args = ['exec', '--sandbox', 'read-only', ...(model ? ['-m', model] : []), ...cfg.get<string[]>('codex.extraArgs', []), '-'];
+	return run(cfg.get<string>('codex.path') || 'codex', args, { cwd, input: `${prompt}\n\n${diff}`, timeoutMs });
+}
+
+async function viaAnthropic(diff: string, cfg: vscode.WorkspaceConfiguration, prompt: string, timeoutMs: number, key?: string) {
+	const url = cfg.get<string>('anthropic.baseUrl', '').replace(/\/+$/, '') + '/v1/messages';
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01', ...(key ? { 'x-api-key': key } : {}), ...cfg.get<Record<string, string>>('anthropic.headers', {}) },
+		body: JSON.stringify({
+			model: cfg.get<string>('anthropic.model'),
+			max_tokens: 1024,
+			system: prompt,
+			messages: [{ role: 'user', content: diff }],
+		}),
+		signal: AbortSignal.timeout(timeoutMs),
+	});
+	if (!res.ok) {
+		throw Object.assign(new Error(`${res.status} ${res.statusText}: ${(await res.text()).slice(0, 500)}`), { status: res.status });
+	}
+	const data = await res.json() as { content?: { type: string; text?: string }[] };
+	return (data.content ?? []).filter(b => b.type === 'text').map(b => b.text).join('');
+}
+
+function generate(provider: unknown, diff: string, cfg: vscode.WorkspaceConfiguration, prompt: string, timeoutMs: number, cwd: string, secrets: vscode.SecretStorage) {
+	switch (provider) {
+		case 'openai': return secrets.get(KEYS.openai).then(key => viaOpenAI(diff, cfg, prompt, timeoutMs, key));
+		case 'anthropic': return secrets.get(KEYS.anthropic).then(key => viaAnthropic(diff, cfg, prompt, timeoutMs, key));
+		case 'codex': return viaCodex(diff, cfg, prompt, timeoutMs, cwd);
+		default: return viaClaude(diff, cfg, prompt, timeoutMs);
+	}
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -69,25 +105,35 @@ export function activate(context: vscode.ExtensionContext) {
 						return;
 					}
 					// ponytail: whole diff is sent; truncate when huge diffs start hitting token limits.
-					const msg = cfg.get('provider') === 'openai'
-						? await viaOpenAI(diff, cfg, prompt, timeoutMs, await context.secrets.get(KEY))
-						: await viaClaude(diff, cfg, prompt, timeoutMs);
+					const msg = await generate(cfg.get('provider'), diff, cfg, prompt, timeoutMs, cwd, context.secrets);
 					if (!msg.trim()) {
 						throw new Error('empty response');
 					}
 					repo.inputBox.value = msg.trim();
 				});
 			} catch (e) {
-				vscode.window.showErrorMessage(`Flash Commit: ${(e as Error).message}`);
+				const provider = cfg.get<string>('provider');
+				const authFailed = (provider === 'openai' || provider === 'anthropic') && [401, 403].includes((e as { status?: number }).status!);
+				const action = await vscode.window.showErrorMessage(`Flash Commit: ${(e as Error).message}`, ...(authFailed ? ['Set API Key'] : []));
+				if (action) {
+					vscode.commands.executeCommand('flashcommit.setApiKey', provider);
+				}
 			}
 		}),
-		vscode.commands.registerCommand('flashcommit.setApiKey', async () => {
-			const key = await vscode.window.showInputBox({ prompt: 'OpenAI-compatible API key (empty to clear)', password: true, ignoreFocusOut: true });
+		vscode.commands.registerCommand('flashcommit.setApiKey', async (id?: keyof typeof KEYS) => {
+			const current = vscode.workspace.getConfiguration('flashcommit').get<string>('provider');
+			const items = (['openai', 'anthropic'] as const).map(id => ({ id, label: id === 'openai' ? 'OpenAI-compatible' : 'Anthropic', picked: id === current }));
+			// Settings links and the error toast pass the provider; the palette asks.
+			const which = items.find(i => i.id === id) ?? await vscode.window.showQuickPick(items, { placeHolder: 'Which API key?' });
+			if (!which) {
+				return;
+			}
+			const key = await vscode.window.showInputBox({ prompt: `${which.label} API key (empty to clear)`, password: true, ignoreFocusOut: true });
 			if (key === undefined) {
 				return;
 			}
-			await (key ? context.secrets.store(KEY, key) : context.secrets.delete(KEY));
-			vscode.window.showInformationMessage(`Flash Commit: API key ${key ? 'saved' : 'cleared'}.`);
+			await (key ? context.secrets.store(KEYS[which.id], key) : context.secrets.delete(KEYS[which.id]));
+			vscode.window.showInformationMessage(`Flash Commit: ${which.label} API key ${key ? 'saved' : 'cleared'}.`);
 		}),
 	);
 }
