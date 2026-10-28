@@ -2,7 +2,7 @@
   "name": "flashcommit",
   "displayName": "Flash Commit",
   "description": "Generate commit messages using Claude Code CLI, Codex CLI, or the OpenAI-compatible / Anthropic APIs",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "repository": {
     "type": "git",
