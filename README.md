@@ -4,7 +4,7 @@ Generate a commit message from your staged diff with one click. Uses the Claude 
 
 ## Usage
 
-Click the sparkle icon in the Source Control title bar, or run **Flash Commit: Generate Commit Message** from the Command Palette. The message is written into the commit input box.
+Click the flash (⚡) icon in the Source Control title bar, or run **Flash Commit: Generate Commit Message** from the Command Palette. The message is written into the commit input box.
 
 ## Requirements
 

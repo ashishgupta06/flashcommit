@@ -18,7 +18,7 @@
         "command": "flashcommit.generate",
         "title": "Generate Commit Message",
         "category": "Flash Commit",
-        "icon": "$(sparkle)"
+        "icon": "$(zap)"
       },
       {
         "command": "flashcommit.setApiKey",
